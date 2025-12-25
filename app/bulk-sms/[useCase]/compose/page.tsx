@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { motion, useReducedMotion } from "framer-motion"
 import Card from "@/components/Card"
 import Button from "@/components/Button"
 import {
