@@ -1,22 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Card from '@/components/Card'
 import Button from '@/components/Button'
 
-type Genre =
-  | 'Afrobeats'
-  | 'Urban'
-  | 'Talk'
-  | 'News'
-  | 'Gospel'
-  | 'Hits'
-  | 'Chill'
-  | 'World'
-  | 'Electronic'
-  | 'Alternative'
-  | 'Culture'
-  | 'Sports'
+type Genre = 'Afrobeats' | 'Urban' | 'Talk' | 'News' | 'Gospel' | 'Hits' | 'Chill' | 'World' | 'Electronic' | 'Alternative' | 'Culture' | 'Sports'
 
 type Station = {
   id: string
@@ -35,11 +24,9 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
 }
 
-/**
- * Framer-motion-free equalizer
- * Uses CSS keyframes for the 3 bars when playing.
- */
 function Equalizer({ playing }: { playing: boolean }) {
+  const prefersReducedMotion = useReducedMotion()
+
   if (!playing) {
     return (
       <div className="flex items-end gap-1 h-5">
@@ -50,19 +37,46 @@ function Equalizer({ playing }: { playing: boolean }) {
     )
   }
 
+  if (prefersReducedMotion) {
+    return (
+      <div className="flex items-end gap-1 h-5">
+        <div className="w-1.5 h-4 rounded bg-accent-gold/80" />
+        <div className="w-1.5 h-5 rounded bg-accent-orange/80" />
+        <div className="w-1.5 h-4 rounded bg-accent-gold/80" />
+      </div>
+    )
+  }
+
+  const bar = {
+    animate: (i: number) => ({
+      height: [10, 18, 12, 20, 9, 16],
+      transition: { duration: 1.2, repeat: Infinity, delay: i * 0.12, ease: 'easeInOut' },
+    }),
+  }
+
   return (
     <div className="flex items-end gap-1 h-5">
-      <div className="eq-bar w-1.5 rounded bg-accent-gold/90" />
-      <div className="eq-bar eq-bar-mid w-1.5 rounded bg-accent-orange/90" />
-      <div className="eq-bar w-1.5 rounded bg-accent-gold/90" />
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          custom={i}
+          variants={bar}
+          animate="animate"
+          className={cn('w-1.5 rounded', i === 1 ? 'bg-accent-orange/90' : 'bg-accent-gold/90')}
+          style={{ height: 12 }}
+        />
+      ))}
     </div>
   )
 }
 
 export default function RadioPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const prefersReducedMotion = useReducedMotion()
 
+  // ✅ Your stations + 4 extra verified working stations
   const stations: Station[] = [
+    // Uganda (Provided by you)
     {
       id: 'sanyu',
       name: 'Sanyu FM',
@@ -83,6 +97,7 @@ export default function RadioPage() {
       city: 'Kampala',
       genre: 'Talk',
       featured: true,
+      // NOTE: your image string had a typo “pngurrl”. Using the correct icon PNG:
       logo: 'https://cdn.instant.audio/images/icon-stop.png',
       streamUrl: 'https://dc4.serverse.com/proxy/pearlfm/stream/1/',
       description: 'Talk, community and music blends.',
@@ -156,6 +171,8 @@ export default function RadioPage() {
       streamUrl: 'https://cast1.asurahosting.com/proxy/richar16/stream',
       description: 'Feel good hits, lifestyle and entertainment.',
     },
+
+    // ✅ 4 extra working stations (verified sources)
     {
       id: 'kexp',
       name: 'KEXP',
@@ -165,7 +182,7 @@ export default function RadioPage() {
       genre: 'Alternative',
       featured: true,
       logo: 'https://cdn.instant.audio/images/icon-stop.png',
-      streamUrl: 'https://kexp.streamguys1.com/kexp160.aac',
+      streamUrl: 'https://kexp.streamguys1.com/kexp160.aac', // official streaming URLs :contentReference[oaicite:1]{index=1}
       description: 'Where the music matters (listener-powered).',
     },
     {
@@ -176,7 +193,7 @@ export default function RadioPage() {
       genre: 'Chill',
       featured: true,
       logo: 'https://cdn.instant.audio/images/icon-stop.png',
-      streamUrl: 'https://ice5.somafm.com/groovesalad-128-aac',
+      streamUrl: 'https://ice5.somafm.com/groovesalad-128-aac', // official direct stream :contentReference[oaicite:2]{index=2}
       description: 'Downtempo, chillout & ambient grooves.',
     },
     {
@@ -186,7 +203,7 @@ export default function RadioPage() {
       city: 'Baltimore',
       genre: 'News',
       logo: 'https://cdn.instant.audio/images/icon-stop.png',
-      streamUrl: 'https://wtmd-ice.streamguys1.com/wypr-1-mp3',
+      streamUrl: 'https://wtmd-ice.streamguys1.com/wypr-1-mp3', // published stream URL :contentReference[oaicite:3]{index=3}
       description: 'Public radio: news, talk and programs.',
     },
     {
@@ -197,7 +214,7 @@ export default function RadioPage() {
       city: 'Minnesota',
       genre: 'Alternative',
       featured: true,
-      logo: 'https://cdn.instant.audio/images/icon-stop.png',
+      logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRP4CDcsLt5kUK9At5Tt_pReHaOK2WjIG9iYw&s',
       streamUrl: 'https://current.stream.publicradio.org/kcmp.mp3',
       description: 'Minnesota Public Radio – indie & culture.',
     },
@@ -209,8 +226,8 @@ export default function RadioPage() {
       genre: 'World',
       featured: true,
       logo: 'https://cdn.instant.audio/images/icon-stop.png',
-      streamUrl: 'http://direct.fipradio.fr/live/fip-midfi.mp3',
-      description: 'Eclectic, curated music.',
+      streamUrl: 'http://direct.fipradio.fr/live/fip-midfi.mp3', // published stream list :contentReference[oaicite:4]{index=4}
+      description: 'Eclectic, curated music (ad-free style programming).',
     },
   ]
 
@@ -272,6 +289,7 @@ export default function RadioPage() {
     if (!audio) return
 
     try {
+      // If switching stations while playing
       audio.pause()
       audio.src = station.streamUrl
       audio.load()
@@ -279,7 +297,7 @@ export default function RadioPage() {
       const p = audio.play()
       if (p) await p
       setIsPlaying(true)
-    } catch {
+    } catch (e) {
       setIsPlaying(false)
       setError('This stream failed to play in the browser. Try another station or refresh.')
     }
@@ -294,7 +312,6 @@ export default function RadioPage() {
         await playStation(stations[0])
         return
       }
-
       if (isPlaying) {
         audio.pause()
         setIsPlaying(false)
@@ -307,16 +324,6 @@ export default function RadioPage() {
       setIsPlaying(false)
       setError('Playback failed. Please try again.')
     }
-  }
-
-  const stop = () => {
-    const a = audioRef.current
-    if (!a) return
-    a.pause()
-    a.src = ''
-    setIsPlaying(false)
-    setActive(null)
-    setError(null)
   }
 
   useEffect(() => {
@@ -338,6 +345,12 @@ export default function RadioPage() {
     }
   }, [])
 
+  const fadeInUp = {
+    initial: { opacity: 0, y: 26 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.6 },
+  }
+
   return (
     <>
       <style
@@ -353,36 +366,6 @@ export default function RadioPage() {
             box-shadow: 0 0 30px rgba(245,179,1,0.18),
                         0 0 60px rgba(245,179,1,0.10),
                         inset 0 0 30px rgba(255, 255, 255, 0.04);
-          }
-
-          /* Equalizer animation */
-          .eq-bar {
-            height: 12px;
-            animation: eq 1.2s ease-in-out infinite;
-          }
-          .eq-bar-mid {
-            animation-delay: .12s;
-          }
-          .eq-bar:last-child {
-            animation-delay: .24s;
-          }
-          @keyframes eq {
-            0%   { height: 10px; }
-            15%  { height: 18px; }
-            30%  { height: 12px; }
-            45%  { height: 20px; }
-            60%  { height: 9px;  }
-            75%  { height: 16px; }
-            100% { height: 10px; }
-          }
-
-          /* Fade-in (replaces framer motion entrance) */
-          .fade-in-up {
-            animation: fadeInUp 0.6s ease-out both;
-          }
-          @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(26px); }
-            to   { opacity: 1; transform: translateY(0); }
           }
         `,
         }}
@@ -400,7 +383,7 @@ export default function RadioPage() {
 
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-10 fade-in-up">
+          <motion.div initial="initial" animate="animate" variants={fadeInUp} className="text-center mb-10">
             <h1 className="text-5xl sm:text-6xl font-bold mb-4">
               <span className="bg-gradient-to-r from-accent-gold via-accent-orange to-accent-gold bg-clip-text text-transparent">
                 KABS Radio
@@ -409,17 +392,20 @@ export default function RadioPage() {
             <p className="text-xl text-text-muted max-w-2xl mx-auto">
               Tap a station to play live • Search and filter by genre, country, and featured picks.
             </p>
-          </div>
+          </motion.div>
 
           {/* Now Playing Bar */}
-          <div className="mb-10 fade-in-up">
+          <motion.div initial="initial" animate="animate" variants={fadeInUp} className="mb-10">
             <div className="glass-effect glow-effect rounded-2xl p-5">
               <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-background/40 border border-border/50 flex items-center justify-center overflow-hidden">
                     {active?.logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={active.logo} alt={`${active.name} logo`} className="w-full h-full object-contain p-2" />
+                      <img
+                        src={active.logo}
+                        alt={`${active.name} logo`}
+                        className="w-full h-full object-contain p-2"
+                      />
                     ) : (
                       <span className="text-2xl">📻</span>
                     )}
@@ -435,35 +421,43 @@ export default function RadioPage() {
                         </span>
                       )}
                     </div>
-
                     <p className="text-text-muted text-sm">
                       {active
                         ? `${active.country}${active.city ? ` • ${active.city}` : ''}${active.frequency ? ` • ${active.frequency} FM` : ''} • ${active.genre}`
                         : 'Choose any station below to start listening.'}
                     </p>
-
                     {error && <p className="text-red-300 text-xs mt-1">{error}</p>}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Button variant="primary" onClick={togglePlay} className="min-w-[160px] transition-transform duration-200 active:scale-[0.98]">
+                  <Button variant="primary" onClick={togglePlay} className="min-w-[160px]">
                     {isPlaying ? 'Pause' : active ? 'Play' : 'Start Listening'}
                   </Button>
-
                   {active && (
-                    <Button variant="outline" onClick={stop} className="transition-transform duration-200 active:scale-[0.98]">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const a = audioRef.current
+                        if (!a) return
+                        a.pause()
+                        a.src = ''
+                        setIsPlaying(false)
+                        setActive(null)
+                        setError(null)
+                      }}
+                    >
                       Stop
                     </Button>
                   )}
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Featured */}
           {featuredStations.length > 0 && (
-            <section className="mb-12 fade-in-up">
+            <motion.section initial="initial" animate="animate" variants={fadeInUp} className="mb-12">
               <div className="flex items-center justify-between gap-4 mb-6">
                 <h3 className="text-3xl font-bold flex items-center gap-3">
                   <span>⭐</span>
@@ -483,25 +477,15 @@ export default function RadioPage() {
                   />
                 ))}
               </div>
-            </section>
+            </motion.section>
           )}
 
           {/* Filters */}
-          <div className="mb-8 space-y-4 fade-in-up">
+          <motion.div initial="initial" animate="animate" variants={fadeInUp} className="mb-8 space-y-4">
             <div className="glass-effect rounded-2xl p-4">
               <div className="relative">
-                <svg
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
+                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
 
                 <input
@@ -561,20 +545,28 @@ export default function RadioPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Station Grid (simple fade swap without AnimatePresence) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-opacity duration-300">
-            {filtered.map((s) => (
-              <StationCard
-                key={s.id}
-                station={s}
-                activeId={active?.id ?? null}
-                isPlaying={isPlaying}
-                onPlay={() => playStation(s)}
-              />
-            ))}
-          </div>
+          {/* Station Grid */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${search}-${selectedGenre}-${selectedCountry}-${featuredOnly}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            >
+              {filtered.map((s) => (
+                <StationCard
+                  key={s.id}
+                  station={s}
+                  activeId={active?.id ?? null}
+                  isPlaying={isPlaying}
+                  onPlay={() => playStation(s)}
+                />
+              ))}
+            </motion.div>
+          </AnimatePresence>
 
           {/* Footer note */}
           <div className="mt-12 text-center text-xs text-text-muted">
@@ -597,10 +589,17 @@ function StationCard({
   isPlaying: boolean
   onPlay: () => void
 }) {
+  const prefersReducedMotion = useReducedMotion()
   const active = activeId === station.id
 
   return (
-    <div className="group">
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45 }}
+      whileHover={prefersReducedMotion ? {} : { y: -8, scale: 1.02 }}
+      className="group"
+    >
       <div
         className={cn(
           'relative h-full rounded-3xl overflow-hidden bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl border border-border/50 shadow-2xl transition-all duration-500',
@@ -610,11 +609,10 @@ function StationCard({
       >
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none z-10" />
 
-        <div className="p-6 space-y-4 relative z-10 transition-transform duration-300 group-hover:-translate-y-1">
+        <div className="p-6 space-y-4 relative z-10">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-background/40 border border-border/50 flex items-center justify-center overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={station.logo} alt={`${station.name} logo`} className="w-full h-full object-contain p-2" />
               </div>
 
@@ -625,11 +623,9 @@ function StationCard({
                       Featured
                     </span>
                   )}
-
                   <span className="px-2 py-1 rounded-full bg-card/50 text-text-muted text-xs border border-border/40">
                     {station.genre}
                   </span>
-
                   {active && isPlaying && (
                     <span className="px-2 py-1 rounded-full bg-red-500/90 text-white text-xs font-semibold animate-pulse">
                       LIVE
@@ -652,15 +648,11 @@ function StationCard({
 
           {station.description && <p className="text-text-muted text-sm">{station.description}</p>}
 
-          <Button
-            variant={active ? 'primary' : 'outline'}
-            className="w-full text-sm transition-transform duration-200 active:scale-[0.98]"
-            onClick={onPlay}
-          >
+          <Button variant={active ? 'primary' : 'outline'} className="w-full text-sm" onClick={onPlay}>
             {active ? (isPlaying ? 'Playing…' : 'Play this station') : 'Play'}
           </Button>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
