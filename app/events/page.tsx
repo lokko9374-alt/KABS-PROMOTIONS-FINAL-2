@@ -405,11 +405,7 @@ function EventCard({ event, onViewDetails }: { event: Event; onViewDetails: (eve
               View Details
             </Button>
             {event.tiktokUrl && (
-              <Button 
-                variant="secondary" 
-                className="text-sm px-4"
-                onClick={() => onViewDetails(event)}
-              >
+             <Button variant="outline" className="text-sm px-4" onClick={() => onViewDetails(event)}>
                 🎬 Watch
               </Button>
             )}
