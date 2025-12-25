@@ -1,45 +1,78 @@
-import Link from 'next/link'
-import { ReactNode } from 'react'
+'use client'
 
-interface ButtonProps {
-  children: ReactNode
-  href?: string
-  onClick?: () => void
-  variant?: 'primary' | 'secondary' | 'outline'
+import Link from 'next/link'
+import React from 'react'
+
+type Variant = 'primary' | 'outline' | 'ghost'
+
+export type ButtonProps = {
+  variant?: Variant
   className?: string
+  children: React.ReactNode
+
+  // Common button props
   type?: 'button' | 'submit' | 'reset'
+  disabled?: boolean
+  onClick?: React.MouseEventHandler<HTMLButtonElement>
+
+  // Optional link mode
+  href?: string
+  target?: string
+  rel?: string
+}
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(' ')
 }
 
 export default function Button({
-  children,
-  href,
-  onClick,
   variant = 'primary',
-  className = '',
+  className,
+  children,
   type = 'button',
+  disabled,
+  onClick,
+  href,
+  target,
+  rel,
 }: ButtonProps) {
-  const baseStyles = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 inline-block text-center'
-  
-  const variants = {
-    primary: 'bg-gradient-to-r from-accent-gold to-accent-orange text-background hover:shadow-gold-glow',
-    secondary: 'bg-card border border-accent-gold/50 text-accent-gold hover:bg-accent-gold/10 hover:border-accent-gold',
-    outline: 'bg-transparent border border-border text-text-primary hover:border-accent-gold hover:text-accent-gold',
+  const base =
+    'inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent-gold/40'
+
+  const styles: Record<Variant, string> = {
+    primary:
+      'bg-accent-gold text-background hover:bg-accent-orange hover:text-background shadow-[0_0_30px_rgba(245,179,1,0.15)]',
+    outline:
+      'bg-transparent border border-border text-text-primary hover:border-accent-gold/50 hover:shadow-[0_0_30px_rgba(245,179,1,0.15)]',
+    ghost: 'bg-transparent text-text-primary hover:bg-card/40',
   }
 
-  const combinedClassName = `${baseStyles} ${variants[variant]} ${className}`
+  const disabledStyles = disabled ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''
 
+  // Link mode
   if (href) {
     return (
-      <Link href={href} className={combinedClassName}>
+      <Link
+        href={href}
+        target={target}
+        rel={rel}
+        className={cn(base, styles[variant], disabledStyles, className)}
+        aria-disabled={disabled ? 'true' : undefined}
+      >
         {children}
       </Link>
     )
   }
 
+  // Button mode
   return (
-    <button type={type} onClick={onClick} className={combinedClassName}>
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(base, styles[variant], disabledStyles, className)}
+    >
       {children}
     </button>
   )
 }
-
