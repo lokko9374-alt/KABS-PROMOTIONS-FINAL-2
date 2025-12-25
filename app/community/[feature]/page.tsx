@@ -1,27 +1,51 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { notFound, useParams } from 'next/navigation'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Card from '@/components/Card'
 import Button from '@/components/Button'
 
-type FeatureKey = 'connect' | 'stories' | 'discussions' | 'meetups' | 'resources' | 'exclusive'
+type FeatureKey = 'network' | 'stories' | 'forums' | 'meetups' | 'support' | 'perks'
 
-type Config = {
+type CommunityGroup = {
+  id: string
+  name: string
+  country: string
+  city?: string
+  description: string
+  members: number
+  featured?: boolean
+  tags: string[]
+}
+
+type ContentBlock = {
+  title: string
+  description: string
+  placeholderContent: string
+}
+
+type Step = {
+  title: string
+  description: string
+  placeholderTip?: string
+}
+
+type FeatureConfig = {
   key: FeatureKey
   title: string
   subtitle: string
-  badge: string
   icon: string
-  hero: string
+  tag: string
+  heroBadge?: string
+  overview: ContentBlock
+  blocks: ContentBlock[]
+  steps: Step[]
   benefits: string[]
-  sections: Array<{ title: string; desc: string; items: string[] }>
-  form: {
-    title: string
-    desc: string
-    fields: Array<{ name: string; label: string; placeholder: string; type?: 'text' | 'email' | 'textarea' }>
-    primaryCta: string
+  ctas: {
+    primary: { label: string; href: string }
+    secondary: { label: string; href: string }
   }
 }
 
@@ -29,248 +53,383 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
 }
 
-function makeId() {
-  return Math.random().toString(16).slice(2, 8).toUpperCase()
+const GROUPS: CommunityGroup[] = [
+  {
+    id: 'ug-diaspora',
+    name: 'Uganda Community',
+    country: 'Uganda',
+    city: 'Kampala',
+    description: 'Local updates, meetups, opportunities, and culture.',
+    members: 1240,
+    featured: true,
+    tags: ['Kampala', 'Opportunities', 'Events'],
+  },
+  {
+    id: 'usa-diaspora',
+    name: 'USA Diaspora',
+    country: 'USA',
+    city: 'Multiple',
+    description: 'Diaspora stories, jobs, events, and support across the US.',
+    members: 3820,
+    featured: true,
+    tags: ['Jobs', 'Meetups', 'Support'],
+  },
+  {
+    id: 'canada-diaspora',
+    name: 'Canada Diaspora',
+    country: 'Canada',
+    city: 'Toronto',
+    description: 'Community, connections, and newcomer resources.',
+    members: 1580,
+    tags: ['Newcomers', 'Toronto', 'Networking'],
+  },
+  {
+    id: 'uae-diaspora',
+    name: 'UAE Diaspora',
+    country: 'UAE',
+    city: 'Dubai',
+    description: 'Networking, social events, and diaspora lifestyle.',
+    members: 940,
+    featured: true,
+    tags: ['Dubai', 'Business', 'Events'],
+  },
+  {
+    id: 'saudi-diaspora',
+    name: 'Saudi Diaspora',
+    country: 'Saudi Arabia',
+    city: 'Riyadh',
+    description: 'Support, events, and community life in KSA.',
+    members: 760,
+    tags: ['Riyadh', 'Support', 'Community'],
+  },
+]
+
+const FEATURE_CONFIG: Record<FeatureKey, FeatureConfig> = {
+  network: {
+    key: 'network',
+    title: 'Connect & Network',
+    subtitle: 'Build real connections that turn into opportunities.',
+    icon: '👥',
+    tag: 'Network',
+    heroBadge: 'MEET PEOPLE WHO MOVE LIKE YOU',
+    overview: {
+      title: 'What this space is for',
+      description:
+        'This section is built like a WhatsApp-style community hub — organized, searchable, and easy to grow as your audience expands.',
+      placeholderContent:
+        'Replace this overview with your real mission statement for networking (what you allow, what you don’t allow, and what success looks like).',
+    },
+    blocks: [
+      {
+        title: 'Member Directory (Placeholder)',
+        description: 'A place to highlight members, businesses, and creators.',
+        placeholderContent:
+          'Add a future directory here: name, city, skills, business type, and a “Contact” button.',
+      },
+      {
+        title: 'Introduce Yourself (Placeholder)',
+        description: 'Help new members break the ice and get welcomed.',
+        placeholderContent:
+          'Add a welcome template: Name • City • What you do • What you’re looking for.',
+      },
+      {
+        title: 'Opportunities (Placeholder)',
+        description: 'Jobs, gigs, collaborations, and volunteering.',
+        placeholderContent:
+          'Add categories: Jobs • Freelance • Collabs • Volunteering • Mentorship.',
+      },
+    ],
+    steps: [
+      {
+        title: 'Join a region group',
+        description: 'Pick a community (USA, Canada, UAE, Saudi, Uganda) and join in seconds.',
+        placeholderTip: 'Later: require login to post, and keep browsing open to everyone.',
+      },
+      {
+        title: 'Post an intro',
+        description: 'Tell people who you are, what you do, and what you’re seeking.',
+        placeholderTip: 'Later: create an “Intro Wizard” that generates a perfect intro post.',
+      },
+      {
+        title: 'Connect with members',
+        description: 'DM or comment to move conversations forward.',
+        placeholderTip: 'Later: add verified profiles + business pages.',
+      },
+    ],
+    benefits: [
+      '✅ Fast connections (no noise)',
+      '⭐ Featured member highlights',
+      '🤝 Mentorship and accountability circles',
+      '🎉 Local meetups and events',
+    ],
+    ctas: {
+      primary: { label: 'Explore Groups', href: '/community' },
+      secondary: { label: 'Back to Community', href: '/community' },
+    },
+  },
+
+  stories: {
+    key: 'stories',
+    title: 'Share Your Story',
+    subtitle: 'Celebrate wins, document journeys, and inspire others.',
+    icon: '📖',
+    tag: 'Stories',
+    heroBadge: 'TURN YOUR JOURNEY INTO IMPACT',
+    overview: {
+      title: 'What this space is for',
+      description:
+        'A story hub where you can publish diaspora journeys, achievements, and lessons — with categories and featured posts.',
+      placeholderContent:
+        'Replace this with your editorial vision: what kind of stories you want (business, migration, faith, family, education, etc.).',
+    },
+    blocks: [
+      {
+        title: 'Featured Stories (Placeholder)',
+        description: 'Highlight powerful stories weekly.',
+        placeholderContent:
+          'Add a “Featured Story” card layout here with author, country, and a cover image.',
+      },
+      {
+        title: 'Submit a Story (Placeholder)',
+        description: 'A simple form to submit written stories or video links.',
+        placeholderContent:
+          'Add fields: Title, Category, Story body, Country, Image, Video link.',
+      },
+      {
+        title: 'Story Categories (Placeholder)',
+        description: 'Keep content easy to browse.',
+        placeholderContent:
+          'Add categories: Business • Culture • Faith • Education • Family • Community.',
+      },
+    ],
+    steps: [
+      { title: 'Pick a category', description: 'Choose where your story fits best.' },
+      { title: 'Write or upload', description: 'Post text, images, or a video link.' },
+      { title: 'Get featured', description: 'Top stories appear on the homepage and newsletters.' },
+    ],
+    benefits: ['✨ Inspire others', '📌 Build credibility', '🎥 Add video stories', '🧡 Community recognition'],
+    ctas: {
+      primary: { label: 'Explore Groups', href: '/community' },
+      secondary: { label: 'Back to Community', href: '/community' },
+    },
+  },
+
+  forums: {
+    key: 'forums',
+    title: 'Join Discussions',
+    subtitle: 'Forums that feel like WhatsApp groups — but organized.',
+    icon: '💬',
+    tag: 'Forums',
+    heroBadge: 'ASK. ANSWER. BUILD TOGETHER.',
+    overview: {
+      title: 'What this space is for',
+      description:
+        'A discussion zone with topics, pinned posts, and searchable threads — so information doesn’t get lost.',
+      placeholderContent:
+        'Replace this with your moderation approach and the main topics you want to prioritize.',
+    },
+    blocks: [
+      {
+        title: 'Popular Topics (Placeholder)',
+        description: 'Help people jump into what’s trending.',
+        placeholderContent:
+          'Add topics: Immigration • Jobs • Business • Events • Culture • Faith • Relationships.',
+      },
+      {
+        title: 'Pinned Resources (Placeholder)',
+        description: 'Keep important info at the top.',
+        placeholderContent:
+          'Add pinned links: rules, community guide, contact support, verified partners.',
+      },
+      {
+        title: 'Weekly Q&A (Placeholder)',
+        description: 'A scheduled AMA (Ask Me Anything).',
+        placeholderContent:
+          'Add a “Weekly Q&A” module where Kabs answers top questions and highlights best posts.',
+      },
+    ],
+    steps: [
+      { title: 'Pick a topic', description: 'Choose a forum category.' },
+      { title: 'Post a question', description: 'Ask clearly and include your location/country.' },
+      { title: 'Engage', description: 'Reply, react, and save helpful answers.' },
+    ],
+    benefits: ['🔎 Searchable threads', '📌 Pinned posts', '✅ Verified answers later', '🧠 Learn faster'],
+    ctas: {
+      primary: { label: 'Explore Groups', href: '/community' },
+      secondary: { label: 'Back to Community', href: '/community' },
+    },
+  },
+
+  meetups: {
+    key: 'meetups',
+    title: 'Events & Meetups',
+    subtitle: 'Find and host meetups in your city or online.',
+    icon: '🎉',
+    tag: 'Meetups',
+    heroBadge: 'MEET IN REAL LIFE',
+    overview: {
+      title: 'What this space is for',
+      description:
+        'A dedicated hub for local meetups and virtual events — with RSVP and announcements.',
+      placeholderContent:
+        'Replace with your event policy: what you host, partner events, safety rules, and ticketing.',
+    },
+    blocks: [
+      {
+        title: 'Upcoming Events (Placeholder)',
+        description: 'A clean list of upcoming meetups.',
+        placeholderContent:
+          'Add event cards: Date, Location, Host, Link to RSVP, and highlights.',
+      },
+      {
+        title: 'Host an Event (Placeholder)',
+        description: 'Let organizers submit events.',
+        placeholderContent:
+          'Add a form: Title, Date, City, Venue/Zoom, Ticket link, description.',
+      },
+      {
+        title: 'Local Chapters (Placeholder)',
+        description: 'City-based organizing teams.',
+        placeholderContent:
+          'Add chapters: Kampala • Dubai • Toronto • Minneapolis • Riyadh, etc.',
+      },
+    ],
+    steps: [
+      { title: 'Browse events', description: 'Filter by country and city.' },
+      { title: 'RSVP', description: 'Get reminders and updates.' },
+      { title: 'Share photos', description: 'Post highlights to build energy.' },
+    ],
+    benefits: ['📍 City-based meetups', '🗓️ Event reminders later', '🎟️ Ticket links', '📸 Post-event highlights'],
+    ctas: {
+      primary: { label: 'Explore Groups', href: '/community' },
+      secondary: { label: 'Back to Community', href: '/community' },
+    },
+  },
+
+  support: {
+    key: 'support',
+    title: 'Resources & Support',
+    subtitle: 'Guides, help, and mentorship — all in one place.',
+    icon: '🤝',
+    tag: 'Support',
+    heroBadge: 'YOU’RE NOT ALONE',
+    overview: {
+      title: 'What this space is for',
+      description:
+        'A resources hub for newcomers and diaspora members — templates, referrals, and mentorship opportunities.',
+      placeholderContent:
+        'Replace with your main support areas: relocation, jobs, mental health, legal referrals, etc.',
+    },
+    blocks: [
+      {
+        title: 'Resource Library (Placeholder)',
+        description: 'Documents, links, and templates.',
+        placeholderContent:
+          'Add: CV templates, interview prep, business registration guides, visa resources.',
+      },
+      {
+        title: 'Mentorship (Placeholder)',
+        description: 'Connect mentees to mentors.',
+        placeholderContent:
+          'Add a matching form: industry, city, availability, goals.',
+      },
+      {
+        title: 'Partner Directory (Placeholder)',
+        description: 'Trusted businesses and services.',
+        placeholderContent:
+          'Add verified partners: lawyers, tax advisors, travel agents, housing, etc.',
+      },
+    ],
+    steps: [
+      { title: 'Search resources', description: 'Find what you need fast.' },
+      { title: 'Request help', description: 'Submit a support request form.' },
+      { title: 'Get matched', description: 'Connect with someone who can help.' },
+    ],
+    benefits: ['📚 Organized library', '🧩 Mentorship matching later', '✅ Verified partners later', '🛟 Help requests'],
+    ctas: {
+      primary: { label: 'Explore Groups', href: '/community' },
+      secondary: { label: 'Back to Community', href: '/community' },
+    },
+  },
+
+  perks: {
+    key: 'perks',
+    title: 'Exclusive Content',
+    subtitle: 'Perks, early access, and member-only drops.',
+    icon: '⭐',
+    tag: 'Perks',
+    heroBadge: 'MEMBERS GET MORE',
+    overview: {
+      title: 'What this space is for',
+      description:
+        'A premium section for early access content, discounts, tickets, and private live sessions.',
+      placeholderContent:
+        'Replace with your real perk model: what’s free, what’s paid, and what members get.',
+    },
+    blocks: [
+      {
+        title: 'Member Drops (Placeholder)',
+        description: 'Exclusive content releases.',
+        placeholderContent:
+          'Add: early videos, unreleased interviews, behind-the-scenes photos, discounts.',
+      },
+      {
+        title: 'Private Events (Placeholder)',
+        description: 'Invite-only Zoom or private meetups.',
+        placeholderContent:
+          'Add: member-only lives, private Q&A, creator sessions.',
+      },
+      {
+        title: 'Discounts (Placeholder)',
+        description: 'Partner discounts and offers.',
+        placeholderContent:
+          'Add: promo codes, affiliate perks, partner deals.',
+      },
+    ],
+    steps: [
+      { title: 'Join membership', description: 'Unlock exclusive benefits.' },
+      { title: 'Access content', description: 'See premium posts and early releases.' },
+      { title: 'Get perks', description: 'Enjoy discounts and special invites.' },
+    ],
+    benefits: ['🎬 Early access', '🎟️ Private invites', '💸 Discounts', '🔥 VIP drops'],
+    ctas: {
+      primary: { label: 'Explore Groups', href: '/community' },
+      secondary: { label: 'Back to Community', href: '/community' },
+    },
+  },
 }
 
-export default function CommunityFeaturePage({ params }: { params: { feature: string } }) {
+const FEATURES_ORDER: Array<{ key: FeatureKey; href: string }> = [
+  { key: 'network', href: '/community/network' },
+  { key: 'stories', href: '/community/stories' },
+  { key: 'forums', href: '/community/forums' },
+  { key: 'meetups', href: '/community/meetups' },
+  { key: 'support', href: '/community/support' },
+  { key: 'perks', href: '/community/perks' },
+]
+
+export default function CommunityFeaturePage() {
   const prefersReducedMotion = useReducedMotion()
+  const params = useParams<{ feature: string }>()
+  const feature = (params?.feature || '') as FeatureKey
 
-  const data = useMemo<Record<FeatureKey, Config>>(
-    () => ({
-      connect: {
-        key: 'connect',
-        title: 'Connect & Network',
-        subtitle: 'Meet the right people. Build relationships. Unlock opportunities.',
-        badge: 'NETWORK',
-        icon: '👥',
-        hero:
-          'A premium space to connect with diaspora professionals, creatives, founders and families — by city, interest and purpose. Designed for safety, quality, and real outcomes.',
-        benefits: ['Curated community', 'City hubs', 'Verified profiles (optional)'],
-        sections: [
-          {
-            title: 'Member Directory',
-            desc: 'Browse and connect by city, country and interests.',
-            items: ['Search + filters', 'Profiles with socials & niche', 'Save favourites (future)'],
-          },
-          {
-            title: 'Collaboration Board',
-            desc: 'Post opportunities and find collaborators.',
-            items: ['Projects', 'Event support', 'Media partnerships'],
-          },
-          {
-            title: 'Safety & Quality',
-            desc: 'A community is only as good as its standards.',
-            items: ['Clear rules', 'Reporting tools', 'Moderation workflow'],
-          },
-        ],
-        form: {
-          title: 'Request Access',
-          desc: 'Submit your details and we’ll contact you with the next steps.',
-          fields: [
-            { name: 'name', label: 'Full Name', placeholder: 'Your full name' },
-            { name: 'email', label: 'Email', placeholder: 'you@email.com', type: 'email' },
-            { name: 'city', label: 'City / Country', placeholder: 'Kampala, Uganda' },
-            { name: 'about', label: 'What are you looking to connect for?', placeholder: 'Networking, business, community…', type: 'textarea' },
-          ],
-          primaryCta: 'Submit Request',
-        },
-      },
+  const cfg = FEATURE_CONFIG[feature]
+  if (!cfg) return notFound()
 
-      stories: {
-        key: 'stories',
-        title: 'Share Your Story',
-        subtitle: 'Milestones. Wins. Lessons. The journey.',
-        badge: 'STORIES',
-        icon: '📖',
-        hero:
-          'Publish stories that inspire — career wins, cultural journeys, business breakthroughs and community spotlights. Crafted to look great and read well.',
-        benefits: ['Featured spotlights', 'Categories & tags', 'Share-ready layouts'],
-        sections: [
-          { title: 'Story Types', desc: 'Structured formats that help you write clearly.', items: ['Journey story', 'Spotlight', 'Lessons learned'] },
-          { title: 'Visibility', desc: 'Choose who sees your story.', items: ['Public', 'Members-only', 'Featured (curated)'] },
-          { title: 'Quality', desc: 'Respectful culture and high-signal feed.', items: ['Guidelines', 'Moderation', 'Reporting'] },
-        ],
-        form: {
-          title: 'Submit a Story',
-          desc: 'Share a short draft and we can polish it later.',
-          fields: [
-            { name: 'name', label: 'Your Name', placeholder: 'Your name' },
-            { name: 'email', label: 'Email', placeholder: 'you@email.com', type: 'email' },
-            { name: 'title', label: 'Story Title', placeholder: 'A short, strong title' },
-            { name: 'story', label: 'Your Story Draft', placeholder: 'Write your story here…', type: 'textarea' },
-          ],
-          primaryCta: 'Submit Story',
-        },
-      },
-
-      discussions: {
-        key: 'discussions',
-        title: 'Join Discussions',
-        subtitle: 'High-signal conversations that actually help.',
-        badge: 'FORUMS',
-        icon: '💬',
-        hero:
-          'Ask questions, share insights, and grow together. Conversations are structured, searchable, and moderated for quality.',
-        benefits: ['Topic channels', 'Pinned resources', 'Search + tags'],
-        sections: [
-          { title: 'Topic Channels', desc: 'Find your lane quickly.', items: ['Jobs & opportunities', 'Business & growth', 'Culture & lifestyle'] },
-          { title: 'Thread Quality', desc: 'We prioritise clarity and usefulness.', items: ['Pinned threads', 'Best answers', 'Trending topics'] },
-          { title: 'Safety', desc: 'Respect and standards are enforced.', items: ['Community rules', 'Moderation', 'Reports'] },
-        ],
-        form: {
-          title: 'Start a Topic',
-          desc: 'Post a topic — we’ll route it to the best channel.',
-          fields: [
-            { name: 'name', label: 'Your Name', placeholder: 'Your name' },
-            { name: 'email', label: 'Email', placeholder: 'you@email.com', type: 'email' },
-            { name: 'topic', label: 'Topic Title', placeholder: 'What do you want to discuss?' },
-            { name: 'details', label: 'Details', placeholder: 'Add context so people can help…', type: 'textarea' },
-          ],
-          primaryCta: 'Post Topic',
-        },
-      },
-
-      meetups: {
-        key: 'meetups',
-        title: 'Events & Meetups',
-        subtitle: 'Go from online to real life.',
-        badge: 'MEETUPS',
-        icon: '🎉',
-        hero:
-          'Discover local and virtual meetups. RSVP, connect, and build community in real life — with tools that keep the experience clean and organized.',
-        benefits: ['Event discovery', 'RSVP reminders', 'Host tools'],
-        sections: [
-          { title: 'Discover', desc: 'Find events by city and interest.', items: ['Local events', 'Virtual events', 'Community gatherings'] },
-          { title: 'RSVP', desc: 'Simple RSVP flows and reminders.', items: ['Confirmations', 'Updates', 'Calendar integration (future)'] },
-          { title: 'Host', desc: 'Organiser tools built-in.', items: ['Host requests', 'Guidelines', 'Attendee management'] },
-        ],
-        form: {
-          title: 'Request to Host an Event',
-          desc: 'Send the event details and we’ll follow up.',
-          fields: [
-            { name: 'name', label: 'Your Name', placeholder: 'Your name' },
-            { name: 'email', label: 'Email', placeholder: 'you@email.com', type: 'email' },
-            { name: 'event', label: 'Event Name', placeholder: 'Name of the event' },
-            { name: 'details', label: 'Event Details', placeholder: 'Date, venue, audience, goal…', type: 'textarea' },
-          ],
-          primaryCta: 'Send Request',
-        },
-      },
-
-      resources: {
-        key: 'resources',
-        title: 'Resources & Support',
-        subtitle: 'Guides, mentorship and community support.',
-        badge: 'SUPPORT',
-        icon: '🤝',
-        hero:
-          'Access curated resources and mentorship pathways — plus support requests to help people move forward with clarity.',
-        benefits: ['Resource library', 'Mentorship pathways', 'Support requests'],
-        sections: [
-          { title: 'Library', desc: 'Curated content that saves time.', items: ['Templates', 'Guides', 'Trusted links'] },
-          { title: 'Mentorship', desc: 'Structured pathways (expandable).', items: ['Mentor categories', 'Office hours (future)', 'Matching (future)'] },
-          { title: 'Support', desc: 'Ask for help and get routed properly.', items: ['Support form', 'Volunteer routing', 'Follow-up tracking'] },
-        ],
-        form: {
-          title: 'Request Support',
-          desc: 'Submit a request and we’ll respond.',
-          fields: [
-            { name: 'name', label: 'Your Name', placeholder: 'Your name' },
-            { name: 'email', label: 'Email', placeholder: 'you@email.com', type: 'email' },
-            { name: 'request', label: 'What do you need help with?', placeholder: 'Tell us what you need…', type: 'textarea' },
-          ],
-          primaryCta: 'Send Request',
-        },
-      },
-
-      exclusive: {
-        key: 'exclusive',
-        title: 'Exclusive Content',
-        subtitle: 'Premium perks, early access, priority invitations.',
-        badge: 'PERKS',
-        icon: '⭐',
-        hero:
-          'A premium layer for loyal supporters: early drops, behind-the-scenes content, and priority invites — designed to feel truly VIP.',
-        benefits: ['Early access', 'VIP drops', 'Partner perks'],
-        sections: [
-          { title: 'Perks', desc: 'Benefits designed to be felt.', items: ['Priority invites', 'Partner discounts', 'Exclusive drops'] },
-          { title: 'Behind the Scenes', desc: 'Closer access to the journey.', items: ['Updates', 'Creator notes', 'Member-only content'] },
-          { title: 'Premium Experience', desc: 'Designed to feel clean and special.', items: ['VIP lane (future)', 'Members-only', 'Priority support'] },
-        ],
-        form: {
-          title: 'Membership Interest',
-          desc: 'Tell us what you want access to.',
-          fields: [
-            { name: 'name', label: 'Your Name', placeholder: 'Your name' },
-            { name: 'email', label: 'Email', placeholder: 'you@email.com', type: 'email' },
-            { name: 'interest', label: 'What perks are you interested in?', placeholder: 'Early invites, BTS, VIP…', type: 'textarea' },
-          ],
-          primaryCta: 'Submit',
-        },
-      },
-    }),
-    []
-  ) as any
-
-  const key = (params.feature || '') as FeatureKey
-  const cfg = data[key]
-
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState<{ ref: string } | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const [formState, setFormState] = useState<Record<string, string>>({})
-
-  if (!cfg) {
-    return (
-      <div className="min-h-screen py-12 px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-3xl font-bold mb-2">Page not found</h1>
-          <p className="text-text-muted mb-6">That community section doesn’t exist.</p>
-          <Link href="/community">
-            <Button variant="primary">Back to Community</Button>
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  const groupsByCountry = useMemo(() => {
+    const map = new Map<string, CommunityGroup[]>()
+    for (const g of GROUPS) {
+      const arr = map.get(g.country) ?? []
+      arr.push(g)
+      map.set(g.country, arr)
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [])
 
   const fadeInUp = {
-    initial: { opacity: 0, y: 26 },
+    initial: { opacity: 0, y: 28 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.6 },
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const res = await fetch('/community/actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feature: cfg.key,
-          payload: formState,
-        }),
-      })
-
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}))
-        throw new Error(j?.error || 'Request failed.')
-      }
-
-      const j = await res.json()
-      setSuccess({ ref: j.ref || makeId() })
-      setFormState({})
-    } catch (err: any) {
-      setError(err?.message || 'Something went wrong. Try again.')
-    } finally {
-      setLoading(false)
-    }
   }
 
   return (
@@ -278,190 +437,317 @@ export default function CommunityFeaturePage({ params }: { params: { feature: st
       <style
         dangerouslySetInnerHTML={{
           __html: `
-          .glass-effect {
-            background: rgba(11, 18, 32, 0.7);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-          }
-          .glossy-overlay {
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.1) 0%,
-              rgba(255, 255, 255, 0.05) 50%,
-              transparent 100%
-            );
-          }
-          .glow-effect {
-            box-shadow: 0 0 30px rgba(245, 179, 1, 0.2),
-                        0 0 60px rgba(245, 179, 1, 0.1),
-                        inset 0 0 30px rgba(255, 255, 255, 0.05);
-          }
-        `,
+            .glass-effect {
+              background: rgba(11, 18, 32, 0.7);
+              backdrop-filter: blur(20px) saturate(180%);
+              -webkit-backdrop-filter: blur(20px) saturate(180%);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .glossy-overlay {
+              background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.1) 0%,
+                rgba(255, 255, 255, 0.05) 50%,
+                transparent 100%
+              );
+            }
+            .glow-effect {
+              box-shadow: 0 0 30px rgba(245, 179, 1, 0.2),
+                          0 0 60px rgba(245, 179, 1, 0.1),
+                          inset 0 0 30px rgba(255, 255, 255, 0.05);
+            }
+          `,
         }}
       />
 
       <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 relative">
+        {/* Background */}
         <div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-card/50 to-background">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,179,1,0.1),transparent_50%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,138,0,0.1),transparent_50%)]" />
         </div>
 
         <div className="max-w-7xl mx-auto">
-          <motion.div initial="initial" animate="animate" variants={fadeInUp} className="mb-6">
-            <Link href="/community" className="text-text-muted hover:text-accent-gold transition-colors text-sm">
-              ← Back to Community
-            </Link>
+          {/* Top Nav */}
+          <motion.div initial="initial" animate="animate" variants={fadeInUp} className="mb-8">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <Link href="/community" className="text-text-muted hover:text-accent-gold transition-colors text-sm">
+                ← Back to Community
+              </Link>
+
+              <div className="flex flex-wrap gap-2">
+                {FEATURES_ORDER.map(({ key, href }) => (
+                  <Link
+                    key={key}
+                    href={href}
+                    className={cn(
+                      'px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300',
+                      key === cfg.key
+                        ? 'glass-effect text-accent-gold border-2 border-accent-gold/50 glow-effect'
+                        : 'bg-card/50 border border-border/50 text-text-muted hover:border-accent-gold/30 hover:text-text-primary'
+                    )}
+                  >
+                    {FEATURE_CONFIG[key].tag}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </motion.div>
 
-          {/* HERO */}
-          <motion.div initial="initial" animate="animate" variants={fadeInUp} className="mb-10">
-            <div className="glass-effect glow-effect rounded-3xl overflow-hidden">
+          {/* Header */}
+          <motion.div initial="initial" animate="animate" variants={fadeInUp} className="text-center mb-10">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <span className="px-3 py-1 rounded-full bg-accent-gold/20 text-accent-gold text-xs font-medium border border-accent-gold/30">
+                {cfg.heroBadge || 'COMMUNITY'}
+              </span>
+              <span className="px-3 py-1 rounded-full bg-card/50 text-text-muted text-xs font-medium border border-border/50">
+                {cfg.tag}
+              </span>
+            </div>
+
+            <h1 className="text-5xl sm:text-6xl font-bold mb-3">
+              <span className="bg-gradient-to-r from-accent-gold via-accent-orange to-accent-gold bg-clip-text text-transparent">
+                {cfg.title}
+              </span>
+            </h1>
+
+            <p className="text-xl text-text-muted max-w-2xl mx-auto">{cfg.subtitle}</p>
+          </motion.div>
+
+          {/* Overview */}
+          <motion.section initial="initial" animate="animate" variants={fadeInUp} className="mb-12">
+            <div className="glass-effect rounded-3xl overflow-hidden glow-effect">
               <div className="relative p-8 sm:p-10">
                 <div className="absolute inset-0 glossy-overlay pointer-events-none" />
-                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-                  <div className="space-y-4">
+
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                  <div className="lg:col-span-2 space-y-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-4xl">{cfg.icon}</span>
-                      <span className="px-3 py-1.5 rounded-full bg-accent-gold/20 text-accent-gold text-xs font-medium border border-accent-gold/30">
-                        {cfg.badge}
-                      </span>
+                      <div className="text-4xl leading-none">{cfg.icon}</div>
+                      <div>
+                        <h2 className="text-3xl font-bold">{cfg.overview.title}</h2>
+                        <p className="text-text-muted">{cfg.overview.description}</p>
+                      </div>
                     </div>
 
-                    <h1 className="text-4xl sm:text-5xl font-bold">
-                      <span className="bg-gradient-to-r from-accent-gold via-accent-orange to-accent-gold bg-clip-text text-transparent">
-                        {cfg.title}
-                      </span>
-                    </h1>
-
-                    <p className="text-lg text-text-muted max-w-2xl">{cfg.hero}</p>
-
-                    <div className="flex flex-wrap gap-3 text-sm text-text-muted pt-2">
-                      {cfg.benefits.map((b) => (
-                        <span key={b} className="px-3 py-2 rounded-xl bg-background/50 border border-border/50">
-                          {b}
-                        </span>
-                      ))}
-                    </div>
+                    <Card className="bg-background/40 border border-border/50">
+                      <div className="space-y-2">
+                        <p className="text-sm text-text-muted">Client-ready copy (edit anytime):</p>
+                        <p className="text-text-primary leading-relaxed">{cfg.overview.placeholderContent}</p>
+                      </div>
+                    </Card>
                   </div>
 
-                  <div className="flex flex-col gap-3">
-                    <Link href="#form" className="w-full">
-                      <Button variant="primary" className="w-full">
-                        {cfg.form.primaryCta}
+                  <div className="space-y-3">
+                    <div className="rounded-2xl bg-background/40 border border-border/50 p-5">
+                      <div className="text-sm text-text-muted">Quick actions</div>
+                      <div className="mt-3 grid gap-3">
+                        <Button variant="primary" href={cfg.ctas.primary.href} className="w-full">
+                          {cfg.ctas.primary.label}
+                        </Button>
+                        <Button variant="outline" href={cfg.ctas.secondary.href} className="w-full">
+                          {cfg.ctas.secondary.label}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-background/40 border border-border/50 p-5">
+                      <div className="text-sm text-text-muted">What you can customize</div>
+                      <ul className="mt-3 space-y-2 text-sm text-text-muted">
+                        <li>• Headlines, descriptions, and benefits</li>
+                        <li>• Groups and countries</li>
+                        <li>• Steps and onboarding flow</li>
+                        <li>• Calls-to-action and buttons</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.section>
+
+          {/* Detail Blocks */}
+          <motion.section initial="initial" animate="animate" variants={fadeInUp} className="mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {cfg.blocks.map((block) => (
+                <motion.div
+                  key={block.title}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45 }}
+                  whileHover={prefersReducedMotion ? {} : { y: -8, scale: 1.02 }}
+                  className="group"
+                >
+                  <div className="relative h-full rounded-3xl overflow-hidden bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl border border-border/50 shadow-2xl transition-all duration-500 hover:border-accent-gold/50 hover:shadow-[0_0_40px_rgba(245,179,1,0.28)]">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none z-10" />
+
+                    <div className="p-6 space-y-4 relative z-10">
+                      <div>
+                        <h3 className="text-2xl font-bold mb-2 group-hover:text-accent-gold transition-colors">
+                          {block.title}
+                        </h3>
+                        <p className="text-text-muted text-sm">{block.description}</p>
+                      </div>
+
+                      <Card className="bg-background/40 border border-border/50">
+                        <div className="space-y-2">
+                          <p className="text-xs text-text-muted">Placeholder (edit anytime):</p>
+                          <p className="text-text-primary text-sm leading-relaxed">{block.placeholderContent}</p>
+                        </div>
+                      </Card>
+
+                      <Button variant="outline" className="w-full text-sm">
+                        Edit Content Later
                       </Button>
-                    </Link>
-                    <Button variant="outline" className="w-full">
-                      Talk to Us
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </motion.div>
+              ))}
             </div>
-          </motion.div>
-
-          {/* SECTIONS */}
-          <motion.section initial="initial" animate="animate" variants={fadeInUp} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {cfg.sections.map((s) => (
-              <motion.div
-                key={s.title}
-                whileHover={prefersReducedMotion ? {} : { y: -6, scale: 1.01 }}
-                className="group"
-              >
-                <div className="relative h-full rounded-3xl overflow-hidden bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl border border-border/50 shadow-2xl transition-all duration-500 hover:border-accent-gold/50 hover:shadow-[0_0_40px_rgba(245,179,1,0.28)]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none z-10" />
-                  <div className="p-6 space-y-3 relative z-10">
-                    <h2 className="text-xl font-bold group-hover:text-accent-gold transition-colors">{s.title}</h2>
-                    <p className="text-sm text-text-muted leading-relaxed">{s.desc}</p>
-                    <ul className="pt-2 space-y-2 text-sm text-text-muted">
-                      {s.items.map((i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-accent-gold mt-0.5">•</span>
-                          <span>{i}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
           </motion.section>
 
-          {/* FORM */}
-          <motion.section id="form" initial="initial" animate="animate" variants={fadeInUp} className="max-w-4xl mx-auto mt-12">
-            <div className="glass-effect glow-effect rounded-3xl overflow-hidden">
-              <div className="relative p-8 sm:p-10">
-                <div className="absolute inset-0 glossy-overlay pointer-events-none" />
-
-                <div className="relative z-10">
-                  <div className="text-center mb-8">
-                    <h2 className="text-3xl sm:text-4xl font-bold">{cfg.form.title}</h2>
-                    <p className="text-text-muted mt-2">{cfg.form.desc}</p>
-                  </div>
-
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {cfg.form.fields.map((f) => {
-                        const value = formState[f.name] || ''
-                        const isTextArea = f.type === 'textarea'
-
-                        return (
-                          <div key={f.name} className={cn(isTextArea && 'md:col-span-2')}>
-                            <label className="text-sm text-text-muted">{f.label}</label>
-                            {isTextArea ? (
-                              <textarea
-                                value={value}
-                                onChange={(e) => setFormState((p) => ({ ...p, [f.name]: e.target.value }))}
-                                placeholder={f.placeholder}
-                                className="mt-2 w-full min-h-[120px] px-4 py-3 rounded-2xl bg-background/50 border border-border/50 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-gold/50 focus:border-accent-gold/50 transition-all"
-                              />
-                            ) : (
-                              <input
-                                value={value}
-                                onChange={(e) => setFormState((p) => ({ ...p, [f.name]: e.target.value }))}
-                                type={f.type || 'text'}
-                                placeholder={f.placeholder}
-                                className="mt-2 w-full px-4 py-3 rounded-2xl bg-background/50 border border-border/50 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-gold/50 focus:border-accent-gold/50 transition-all"
-                              />
-                            )}
-                          </div>
-                        )
-                      })}
+          {/* Steps + Benefits */}
+          <motion.section initial="initial" animate="animate" variants={fadeInUp} className="mb-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="glass-effect rounded-3xl p-7 glow-effect">
+                <h3 className="text-3xl font-bold mb-6">How it works</h3>
+                <div className="space-y-4">
+                  {cfg.steps.map((s, idx) => (
+                    <div key={s.title} className="rounded-2xl bg-background/40 border border-border/50 p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-9 h-9 rounded-xl bg-accent-gold/20 text-accent-gold border border-accent-gold/30 flex items-center justify-center font-bold">
+                          {idx + 1}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-lg font-semibold">{s.title}</div>
+                          <div className="text-sm text-text-muted">{s.description}</div>
+                          {s.placeholderTip && (
+                            <div className="text-xs text-text-muted pt-2">
+                              <span className="text-accent-gold">Tip:</span> {s.placeholderTip}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </div>
 
-                    {error && <div className="text-red-300 text-sm">{error}</div>}
+              <div className="glass-effect rounded-3xl p-7 glow-effect">
+                <h3 className="text-3xl font-bold mb-4">Benefits</h3>
+                <p className="text-text-muted mb-5">These are client-ready bullets. Replace anytime.</p>
+                <div className="flex flex-wrap gap-3 text-sm text-text-muted">
+                  {cfg.benefits.map((b: string) => (
+                    <span key={b} className="px-3 py-2 rounded-xl bg-background/50 border border-border/50">
+                      {b}
+                    </span>
+                  ))}
+                </div>
 
-                    <AnimatePresence>
-                      {success && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="rounded-2xl border border-accent-gold/40 bg-accent-gold/10 p-4"
-                        >
-                          <div className="font-semibold text-accent-gold">Submitted successfully</div>
-                          <div className="text-sm text-text-muted mt-1">
-                            Reference: <span className="text-text-primary font-mono">{success.ref}</span>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <Button variant="primary" className="w-full" disabled={loading}>
-                      {loading ? 'Submitting…' : cfg.form.primaryCta}
-                    </Button>
-
-                    <div className="text-xs text-text-muted text-center">
-                      By submitting, you agree to be contacted about your request.
-                    </div>
-                  </form>
+                <div className="pt-6 grid gap-3">
+                  <Button variant="primary" href={cfg.ctas.primary.href} className="w-full">
+                    {cfg.ctas.primary.label}
+                  </Button>
+                  <Button variant="outline" href={cfg.ctas.secondary.href} className="w-full">
+                    {cfg.ctas.secondary.label}
+                  </Button>
                 </div>
               </div>
             </div>
           </motion.section>
 
+          {/* Region Groups (visible now, login later) */}
+          <motion.section initial="initial" animate="animate" variants={fadeInUp} className="mb-6">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <h3 className="text-3xl font-bold">Communities by Country</h3>
+              <div className="text-sm text-text-muted">
+                Visible now • Chat will be enabled after you add Supabase/auth
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              {groupsByCountry.map(([country, groups]) => (
+                <div key={country} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xl font-semibold text-text-primary">{country}</h4>
+                    <span className="text-xs text-text-muted">{groups.length} group(s)</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {groups.map((g) => (
+                      <motion.div
+                        key={g.id}
+                        initial={{ opacity: 0, y: 18 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.45 }}
+                        whileHover={prefersReducedMotion ? {} : { y: -8, scale: 1.02 }}
+                        className="group"
+                      >
+                        <div className="relative h-full rounded-3xl overflow-hidden bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl border border-border/50 shadow-2xl transition-all duration-500 hover:border-accent-gold/50 hover:shadow-[0_0_40px_rgba(245,179,1,0.28)]">
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none z-10" />
+
+                          <div className="p-6 space-y-4 relative z-10">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {g.featured && (
+                                    <span className="px-2 py-1 rounded-full bg-accent-gold/20 text-accent-gold text-xs font-medium border border-accent-gold/30">
+                                      Featured
+                                    </span>
+                                  )}
+                                  <span className="px-2 py-1 rounded-full bg-card/50 text-text-muted text-xs border border-border/40">
+                                    {country}
+                                  </span>
+                                </div>
+
+                                <h5 className="text-2xl font-bold mt-2 mb-1 group-hover:text-accent-gold transition-colors truncate">
+                                  {g.name}
+                                </h5>
+                                <p className="text-text-muted text-sm">
+                                  {g.city ? `${g.city} • ` : ''}
+                                  {g.members.toLocaleString()} members
+                                </p>
+                              </div>
+                            </div>
+
+                            <p className="text-text-muted text-sm">{g.description}</p>
+
+                            <div className="flex flex-wrap gap-2">
+                              {g.tags.map((t) => (
+                                <span
+                                  key={t}
+                                  className="px-2.5 py-1 rounded-full bg-background/40 border border-border/50 text-xs text-text-muted"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+
+                            <div className="pt-2 space-y-2">
+                              <Button variant="primary" className="w-full text-sm" disabled>
+                                Join Group (Login needed)
+                              </Button>
+                              <Button variant="outline" className="w-full text-sm" disabled>
+                                Open Chat (Coming soon)
+                              </Button>
+                            </div>
+
+                            <div className="text-xs text-text-muted pt-1">
+                              This is visible now. You’ll enable real group chat after Supabase is connected.
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+
+          {/* Footer */}
           <div className="mt-12 text-center text-xs text-text-muted">
-            Next step: connect this form to Supabase so submissions are saved permanently and viewable in an admin dashboard.
+            Tip: This page is fully “client ready” visually. When you’re ready, we’ll connect Supabase for login + group chat.
           </div>
         </div>
       </div>
