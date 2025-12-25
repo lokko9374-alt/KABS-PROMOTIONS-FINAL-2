@@ -20,10 +20,6 @@ type Station = {
   description?: string
 }
 
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ')
-}
-
 function Equalizer({ playing }: { playing: boolean }) {
   const prefersReducedMotion = useReducedMotion()
 
@@ -46,6 +42,29 @@ function Equalizer({ playing }: { playing: boolean }) {
       </div>
     )
   }
+
+  return (
+    <div className="flex items-end gap-1 h-5">
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          className={cn('w-1.5 rounded', i === 1 ? 'bg-accent-orange/90' : 'bg-accent-gold/90')}
+          initial={{ height: 10 }}
+          animate={{
+            height: [10, 18, 12, 20, 9, 16],
+          }}
+          transition={{
+            duration: 1.2,
+            repeat: Infinity,
+            delay: i * 0.12,
+            ease: 'easeInOut',
+          }}
+          style={{ height: 12 }}
+        />
+      ))}
+    </div>
+  )
+}
 
   const bar = {
     animate: (i: number) => ({
