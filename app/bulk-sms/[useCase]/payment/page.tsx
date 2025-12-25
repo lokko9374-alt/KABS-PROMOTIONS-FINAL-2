@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import Card from "@/components/Card"
 import Button from "@/components/Button"
 import { BulkDraft, BulkUseCaseId, PaymentMethod, draftStorageKey, estimateCost, useCases } from "@/lib/bulkSms"
