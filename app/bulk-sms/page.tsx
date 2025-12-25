@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { motion, useReducedMotion } from "framer-motion"
 import Card from "@/components/Card"
 import Button from "@/components/Button"
 import { useCases } from "@/lib/bulkSms"
@@ -26,6 +25,8 @@ export default function BulkSMS() {
           -webkit-backdrop-filter: blur(20px) saturate(180%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        .fade-in-up { animation: fadeInUp .6s ease-out both; }
+
         .glossy-overlay {
           background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
         }
