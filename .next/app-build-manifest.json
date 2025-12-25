@@ -70,6 +70,16 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/bulk-sms/[useCase]/success/page.js"
+    ],
+    "/community/[feature]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/community/[feature]/page.js"
+    ],
+    "/community/hubs/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/community/hubs/page.js"
     ]
   }
 }
